@@ -1,0 +1,25 @@
+Theme_ID,Theme,Mot_Cle,Importance_Poids_TFIDF,Rang
+0,Diplomatie Bloc Occidental,royaume uni,0.06437757762486238,1
+0,Diplomatie Bloc Occidental,royaume,0.06350025853201148,2
+0,Diplomatie Bloc Occidental,uni,0.059317366661564876,3
+1,Politique Française Générale,pari,0.03336958505130418,1
+1,Politique Française Générale,président,0.027657889762315268,2
+1,Politique Française Générale,faire,0.026960246185922694,3
+2,Conflit Militaire (Ukraine),ukraine,0.03616793495738287,1
+2,Conflit Militaire (Ukraine),russie,0.03576226634268734,2
+2,Conflit Militaire (Ukraine),déclarer,0.033567524525469836,3
+4,Affaires Militaires et Défense,militaire,0.04344937179176693,1
+4,Affaires Militaires et Défense,événement,0.04300346676745188,2
+4,Affaires Militaires et Défense,principal,0.03962156102031437,3
+5,Grandes Relations Diplomatiques,chef,0.03388999355906002,1
+5,Grandes Relations Diplomatiques,washington,0.03306870430731018,2
+5,Grandes Relations Diplomatiques,diplomatie,0.02945458632626336,3
+6,Actualité Virale et ONU,viral,0.08676599781779487,1
+6,Actualité Virale et ONU,emmanuel,0.05874430505009756,2
+6,Actualité Virale et ONU,new,0.0541055747973537,3
+7,Souveraineté Africaine et IA,niger,0.03349721960707869,1
+7,Souveraineté Africaine et IA,afrique,0.03339540948359472,2
+7,Souveraineté Africaine et IA,burkina,0.030001266725563348,3
+8,Manifestations et Mouvements Sociaux,correspondant,0.08536661158338474,1
+8,Manifestations et Mouvements Sociaux,pari,0.08206356987149342,2
+8,Manifestations et Mouvements Sociaux,correspondant afrique,0.0791283809036969,3

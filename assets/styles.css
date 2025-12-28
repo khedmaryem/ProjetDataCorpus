@@ -1,0 +1,99 @@
+/* 1️⃣ Fond global et mise en page */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif; /* Police moderne et lisible */
+    background: linear-gradient(135deg, #f6f9fc, #e9eff5);
+    color: #2c3e50;
+}
+
+/* 2️⃣ Titres */
+h1 {
+    font-size: 2.8em;
+    text-align: center;
+    color: #1a202c;
+    margin-top: 30px;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+h3 {
+    text-align: center;
+    color: #2b4f81;
+    border-bottom: 2px solid #dce3f0;
+    padding-bottom: 8px;
+    margin-top: 30px;
+}
+
+/* 3️⃣ Conteneur principal */
+.dash-app-content {
+    padding: 20px 30px;
+    max-width: 1600px;
+    margin: auto;
+}
+
+/* 4️⃣ Onglets */
+.dash-tabs {
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.dash-tab {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+.dash-tab:hover {
+    background-color: #e9ecef !important;
+    color: #007bff !important;
+}
+
+.dash-tab--selected {
+    border-top: 4px solid #007bff !important;
+    background-color: #ffffff !important;
+    color: #007bff !important;
+    font-weight: 600;
+}
+
+/* 5️⃣ Graphiques */
+.dash-graph {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    padding: 15px;
+    margin-bottom: 25px;
+    transition: transform 0.2s ease;
+}
+
+.dash-graph:hover {
+    transform: scale(1.01);
+}
+
+/* 6️⃣ Dropdown et formulaires */
+.Select-control {
+    border-radius: 8px !important;
+    border: 1px solid #cfd8e3 !important;
+    box-shadow: none !important;
+}
+
+.Select-control:hover {
+    border-color: #007bff !important;
+}
+
+.Select-placeholder, .Select-value-label {
+    font-size: 1.1em;
+}
+
+/* 7️⃣ Animation légère sur les transitions */
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+.dash-graph, .dash-tabs, h1, h3 {
+    animation: fadeIn 0.6s ease;
+}

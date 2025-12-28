@@ -1,0 +1,7 @@
+Top level keys: ['metadata', 'data']
+metadata keys: ['all', 'year', 'month', 'day']
+metadata['all'] keys: ['kws', 'loc', 'org', 'per', 'num']
+Total keywords: 47860
+First 20 kws: {'afrique': 5697, 'propre': 348, 'monnaie': 411, 'unique': 224, 'sputnik': 2140, 'henri': 82, 'doué': 12, 'taï': 6, 'industriel': 114, 'ivoirien': 99, 'part': 1610, 'forum': 528, 'économique': 1261, 'international': 1119, 'pays': 11711, 'africains': 1839, 'propres': 298, 'monnaies': 216, 'confédérale': 1, 'fédération': 408}
+Other keys found: ['data']
+Type of data['data']: <class 'dict'>
