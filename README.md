@@ -1,6 +1,6 @@
 # Projet d'Analyse de Corpus et Dashboard
 
-Ce projet est une application de visualisation de données (Dashboard) construite avec Python et Dash. Elle permet d'analyser un corpus de documents, d'explorer les thématiques, l'évolution temporelle et la répartition géographique des données.
+Ce projet porte sur le développement d'un tableau de bord de visualisation de données conçu avec Python et Dash. Il permet d'analyser un corpus de documents, d'explorer les thématiques, l'évolution temporelle et la répartition géographique des données.
 
 ## Prérequis
 
