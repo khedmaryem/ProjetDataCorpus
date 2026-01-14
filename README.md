@@ -41,7 +41,3 @@ Le dashboard est composé de trois onglets principaux :
 1.  **Analyse Annuelle Détaillée** : Pour explorer les données année par année.
 2.  **Comparaison 2024 vs 2025** : Pour comparer les tendances entre les années.
 3.  **Aperçu Global du Corpus** : Pour une vue d'ensemble, incluant la carte géographique interactive et les nuages de mots.
-
-## Structure des données
-
-Le projet s'attend à trouver les fichiers CSV de données générés (ex: `dashboard_data_final.csv`, `aggregated_locations_geocoded.csv`) à la racine du projet.
