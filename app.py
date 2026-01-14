@@ -1,241 +1,605 @@
-import streamlit as st
+import dash
+from dash import dcc
+from dash import html
+from dash.dependencies import Input, Output
 import pandas as pd
-import pydeck as pdk
 import plotly.express as px
+import plotly.graph_objects as go
+# Style CSS personnalisé pour un look épuré
+custom_style = {
+    'backgroundColor': '#F4F7F9',
+    'padding': '20px',
+    'fontFamily': '"Poppins", sans-serif'
+}
 
+card_style = {
+    'backgroundColor': 'white',
+    'borderRadius': '10px',
+    'box-shadow': '0 4px 6px rgba(0,0,0,0.1)',
+    'padding': '15px',
+    'margin': '10px',
+    'border': 'none'
+}
 
+THEME_IMAGE_MAP = {
+    "Conflit Militaire (Ukraine)": "Conflit_Militaire_Ukraine.png",
+    "Actualité Virale et ONU": "Actualite_Virale_et_ONU.png",
+    "Affaires Militaires et Défense": "Affaires_Militaires_et_Defense.png",
+    "Diplomatie Bloc Occidental": "Diplomatie_Bloc_Occidental.png",
+    "Grandes Relations Diplomatiques": "Grandes_Relations_Diplomatiques.png",
+    "Manifestations et Mouvements Sociaux": "Manifestations_et_Mouvements_Sociaux.png",
+    "Politique Française Générale":"Politique_Francaise_Generale.png",
+    "Souveraineté Africaine et IA":"Souverainete_Africaine_et_IA.png",
+}
 
-st.set_page_config(layout="wide", page_title="Géographie de l'Information - Sputnik Analysis", page_icon="🌍")
-
-
-
-# --- Custom CSS for Premium Feel ---
-
-st.markdown("""
-
-<style>
-
-    .reportview-container {
-
-        background: #0e1117;
-
-    }
-
-    h1 {
-
-        font-family: 'Helvetica Neue', sans-serif;
-
-        font-weight: 700;
-
-        color: #f0f2f6;
-
-    }
-
-    h2, h3 {
-
-        font-family: 'Helvetica Neue', sans-serif;
-
-        color: #d0d2d6;
-
-    }
-
-    .stMetric {
-
-        background-color: #1f2937;
-
-        padding: 15px;
-
-        border-radius: 10px;
-
-        border: 1px solid #374151;
-
-    }
-
-</style>
-
-""", unsafe_allow_html=True)
-
-
-
-st.title("🌍 Observatoire Géopolitique")
-
-st.markdown("**Visualisation Avancée des Flux d'Information (Sputnik News)**")
-
-
-# --- Loading Data ---
-@st.cache_data
-def load_data():
-    try:
-        df_map = pd.read_csv('aggregated_locations_geocoded.csv')
-        if 'Count' in df_map.columns:
-            df_map['normalized'] = df_map['Count'] / df_map['Count'].max()
-    except:
-        df_map = pd.DataFrame()
-
-    try:
-        df_year = pd.read_csv('locations_by_year.csv')
-    except:
-        df_year = pd.DataFrame()
+def apply_global_style(fig, title_text):
+    """Applique une charte graphique uniforme à tous les graphiques du dashboard."""
+    fig.update_layout(
+        title={
+            'text': f"<b>{title_text}</b>",
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top',
+            'font': {'size': 18, 'family': 'Poppins, Arial, sans-serif', 'color': '#2C3E50'}
+        },
+        template="plotly_white",
+        font=dict(family="Poppins, Arial, sans-serif", size=12, color="#7F8C8D"),
+        hovermode="x unified",
+        margin=dict(l=50, r=50, t=80, b=50),
+        height=400,
+        paper_bgcolor='rgba(0,0,0,0)', # Fond transparent pour s'intégrer aux cartes
+        plot_bgcolor='rgba(0,0,0,0)',
         
-    return df_map, df_year
-
-df_map, df_year = load_data()
-
-if df_map.empty:
-    st.error("Les données géographiques ne sont pas encore prêtes. Veuillez vérifier vos fichiers CSV.")
-    st.stop()
-
-# --- Sidebar Controls ---
-st.sidebar.title("⚙️ Paramètres")
-years = sorted(df_year['Year'].unique()) if not df_year.empty else []
-view_mode = st.sidebar.radio("Mode de Vue", ["Vue Globale (Cumulée)", "Évolution Temporelle"])
-
-selected_year = None
-if view_mode == "Évolution Temporelle" and years:
-    selected_year = st.sidebar.select_slider("Sélectionner l'Année", options=years)
-
-map_type = st.sidebar.selectbox(
-    "Type de Visualisation", 
-    ["Colonnes 3D (Volume)", "Heatmap & Densité (Analyse)", "Cellules Hexagonales (Précision)", "Scatter (Points)"]
-)
-
-# Filter Data
-if view_mode == "Évolution Temporelle" and selected_year:
-    current_df = df_year[df_year['Year'] == selected_year].copy()
-else:
-    current_df = df_map.copy()
-
-# --- Main Dashboard ---
-
-# 1. KPI Row
-total_locs = len(current_df)
-top_loc = current_df.iloc[0]['Location'] if not current_df.empty else "N/A"
-top_count = current_df.iloc[0]['Count'] if not current_df.empty else 0
-
-c1, c2, c3 = st.columns(3)
-c1.metric("Lieux Mentionnés", total_locs)
-c2.metric("Lieu le plus cité", top_loc)
-c3.metric("Volume max (Mentions)", top_count)
-
-st.divider()
-
-# 2. GRAPHIQUES DE SYNTHÈSE (Nouveau - Correspondant à vos images)
-col_left, col_right = st.columns(2)
-
-with col_left:
-    st.subheader("📊 Top 15 des Lieux")
-    top_15 = current_df.nlargest(15, 'Count')
-    fig_bar = px.bar(
-        top_15, x='Count', y='Location', orientation='h',
-        color='Count', color_continuous_scale='Oranges',
-        labels={'Count': 'Volume de mentions', 'Location': 'Lieu'}
-    )
-    fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white')
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-with col_right:
-    st.subheader("📈 Évolution des Top Lieux")
-    if not df_year.empty:
-        # On prend les 5 lieux les plus importants historiquement
-        top_5_ever = df_map.nlargest(5, 'Count')['Location'].tolist()
-        df_top_evolution = df_year[df_year['Location'].isin(top_5_ever)]
+        # Légende uniforme pour tous les graphes
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(size=10, color="#2C3E50"),
+            bgcolor="rgba(255, 255, 255, 0)"
+        ),
         
-        fig_line = px.line(
-            df_top_evolution, x='Year', y='Count', color='Location',
-            markers=True, line_shape='spline'
+        # Style des axes uniforme
+        xaxis=dict(
+            showgrid=False,
+            linecolor='#BDC3C7',
+            title_font={'size': 13, 'color': '#2C3E50'}
+        ),
+        yaxis=dict(
+            gridcolor='#ECF0F1',
+            linecolor='#BDC3C7',
+            title_font={'size': 13, 'color': '#2C3E50'}
         )
-        fig_line.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white')
-        st.plotly_chart(fig_line, use_container_width=True)
+    )
+    return fig
+# --- 1. CHARGEMENT ET PRÉPARATION GLOBALE DES DONNÉES ---
+try:
+    df_dashboard = pd.read_csv("dashboard_data_final.csv")
+    df_top_words = pd.read_csv("df_top_words_clean.csv")
+    df_dashboard['year'] = df_dashboard['year'].astype(str)
+    # Préparation de la colonne temporelle YYYY-MM
+    df_dashboard['month'] = df_dashboard['month'].apply(lambda x: f'{x:02d}')
+    df_dashboard['YearMonth'] = df_dashboard['year'] + '-' + df_dashboard['month']
+except FileNotFoundError:
+    print("Erreur : Les fichiers de données sont introuvables. Assurez-vous d'avoir exécuté la partie Data Mining.")
+    exit()
+
+# --- CHARGEMENT DONNÉES UTILISATEUR (GÉO) ---
+try:
+    df_geo_map = pd.read_csv('aggregated_locations_geocoded.csv')
+    if 'Count' in df_geo_map.columns:
+        df_geo_map['normalized'] = df_geo_map['Count'] / df_geo_map['Count'].max()
+except:
+    df_geo_map = pd.DataFrame()
+
+try:
+    df_geo_year = pd.read_csv('locations_by_year.csv')
+except:
+    df_geo_year = pd.DataFrame()
+
+# Préparation des options pour le menu déroulant
+ALL_YEARS = [{'label': 'Global (Toutes Années)', 'value': 'ALL'}] + \
+            [{'label': str(y), 'value': str(y)} for y in sorted(df_dashboard['year'].unique(), reverse=True)]
+
+# --- 2. FONCTIONS DE GÉNÉRATION DES GRAPHIQUES STATIQUES (SANS 'self') ---
+
+def generate_3d_scatter(df):
+    """Génère une version améliorée du Nuage de Points 3D (ACP)."""
+    fig = px.scatter_3d(
+        df,x='CP1', y='CP2', z='CP3', 
+        color='Theme', 
+        hover_name='Theme',
+        # On peut ajouter le titre de l'article ou les mots clés au survol :
+        hover_data={'CP1':True, 'CP2':True, 'CP3':True, 'Theme':True},
+        title='<b>Analyse Spatiale des Thématiques (ACP 3D)</b>',
+        opacity=0.7,      # Ajoute de la transparence pour voir à travers les amas
+        size_max=10       # Contrôle la taille maximale des points
+    )
+
+    # Personnalisation avancée du design
+    fig.update_traces(
+        marker=dict(
+            size=5, 
+            line=dict(width=1, color='DarkSlateGrey') # Ajoute un contour aux points
+        )
+    )
+
+    fig.update_layout(
+        template="plotly_white", # Fond blanc plus professionnel
+        margin=dict(l=0, r=0, b=0, t=50), # Maximise l'espace pour le graphique
+        scene=dict(
+            xaxis=dict(title='Axe d\'importance 1', showbackground=False),
+            yaxis=dict(title='Axe d\'importance 2', showbackground=False),
+            zaxis=dict(title='Axe d\'importance 3', showbackground=False),
+        ),
+        legend=dict(
+            title="Thématiques identifiées",
+            orientation="v",
+            yanchor="top",
+            y=0.9,
+            xanchor="left",
+            x=1.1
+        )
+    )
+    return fig
+
+def generate_treemap(df):
+    """Génère le Treemap de distribution globale."""
+    df_count_theme = df['Theme'].value_counts().rename_axis('Theme').reset_index(name='Count')
+    fig = px.treemap(
+        df_count_theme, 
+        path=['Theme'], 
+        values='Count', 
+        color='Count', 
+        color_continuous_scale=px.colors.sequential.Blues, 
+        title='<b>Distribution Globale du Corpus par Thème</b>'
+    )
+    return fig
+
+def generate_article_per_year(df):
+    """Génère le Bar Chart du nombre d'articles par Année (Global)."""
+    fig = px.bar(
+        df.groupby("year").size().reset_index(name='Count'), 
+        x='year', 
+        y='Count', 
+        title="<b>Nombre d'articles par Année</b>"
+    )
+    fig.update_traces(width=0.2)
+    fig.update_layout(xaxis_title="<b>Année</b>", yaxis_title="<b>Nombre d'articles</b>",title_font_size=18, # Augmenter la taille du titre
+        font=dict(size=12))
+    return fig
+
+def generate_article_per_month(df, annee):
+    """Génère le Bar Chart + Ligne de Tendance pour une année donnée."""
+    df_annee = df[df['year'] == annee]
+    article_per_month = df_annee.groupby("month").size().reset_index(name='Count')
+    article_per_month['Trend'] = article_per_month['Count'].rolling(window=3, center=True).mean()
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=article_per_month['month'], y=article_per_month['Count'], marker_color='rgba(52, 152, 219, 0.3)',marker_line=dict(width=1, color='rgba(52, 152, 219, 0.6)'),
+        width=0.5, showlegend=False))
+    fig.add_trace(go.Scatter(x=article_per_month['month'], y=article_per_month['Trend'], mode='lines+markers', name='Tendance (Moyenne Mobile 3 Mois)', line=dict(color='#EF553B', width=3, shape='spline')))
+    fig.update_layout(
+        title=f"<b>Analyse du Volume Mensuel en {annee}</b>",
+        template="plotly_white",
+        hovermode="x unified",
+        
+        # Positionnement de la légende au-dessus (horizontal)
+        legend=dict(
+            orientation="h",      # "h" pour horizontal
+            yanchor="bottom",
+            y=1.02,               # Juste au-dessus du graphique
+            xanchor="right",
+            x=1,                  # Aligné à droite
+            bgcolor="rgba(255, 255, 255, 0)" # Fond transparent
+        ),
+        
+        # Réduction des marges pour gagner de la place
+        margin=dict(l=40, r=40, t=80, b=40),
+        xaxis=dict(title="Mois de l'année"),
+        yaxis=dict(title="Nombre d'articles", gridcolor='#F0F0F0')
+    )
+    return fig
+
+def generate_heatmap_themes(df, annee):
+    """Génère une Heatmap filtrée par année : Thèmes en ligne, Mois en colonne."""
+    # On filtre les données pour l'année sélectionnée
+    df_filtered = df[df['year'] == annee]
+    
+    # On groupe par mois et par thème
+    df_heat = df_filtered.groupby(['month', 'Theme']).size().reset_index(name='Count')
+    
+    fig = px.density_heatmap(
+        df_heat, 
+        x="month", 
+        y="Theme", 
+        z="Count", 
+        color_continuous_scale='Viridis',
+        title=f"<b>Intensité Médiatique par Thème en {annee}</b>",
+        labels={'month': 'Mois', 'Count': 'Nombre d\'articles'},
+        # On force l'affichage des 12 mois pour la clarté
+        category_orders={"month": [f"{m:02d}" for m in range(1, 13)]} 
+    )
+    
+    fig.update_layout(
+        height=450,
+        margin=dict(t=50, b=50, l=50, r=50),
+        xaxis_title="Mois",
+        yaxis_title="Thématiques"
+    )
+    return fig
+
+def generate_comparison_chart(df):
+    """Génère le Bar Chart Groupé de comparaison Thèmes 2024 vs 2025."""
+    df_comparison = df.groupby(['Theme', 'year']).size().reset_index(name='Count')
+    df_pivot = df_comparison.pivot(index='Theme', columns='year', values='Count').fillna(0).reset_index()
+    df_comparison_full = pd.melt(df_pivot, id_vars=['Theme'], value_vars=df_pivot.columns.drop('Theme'), var_name='year', value_name='Count')
+    
+    fig = px.bar(df_comparison_full, x='Theme', y='Count', color='year', barmode='group', title="<b>Volume d'Articles par Thème</b>")
+    fig.update_layout(xaxis_title="<b>Thème</b>", yaxis_title="<b>Nombre d'articles</b>", xaxis={'categoryorder':'total descending', 'tickangle': -45},title_font_size=18, font=dict(size=12)) # Police des axes/légendes)
+    return fig
+
+def generate_trend_chart(df):
+    """Génère le Area Chart de Tendance des Thèmes."""
+    df_themes_trend = df.groupby(['YearMonth', 'Theme']).size().reset_index(name='Count')
+    df_themes_trend_clean = df_themes_trend[df_themes_trend['Theme'] != 'Bruit Média/Podcast']
+    
+    fig = px.area(
+        df_themes_trend_clean, 
+        x='YearMonth', 
+        y='Count', 
+        color='Theme', 
+        title="<b>Évolution Mensuelle du Volume d'Articles par Thème</b>", 
+        color_discrete_sequence=px.colors.qualitative.Dark24
+    )
+    fig.update_layout(xaxis_tickangle=-45, xaxis = dict(dtick="M1", tickformat="%Y-%m"))
+    return fig
+
+# Dans la Section 2. FONCTIONS DE GÉNÉRATION DES GRAPHIQUES STATIQUES (SANS 'self')
+
+def generate_theme_volume_bar(df, annee):
+    """Génère le Bar Chart des volumes thématiques pour une année donnée."""
+    if annee == 'ALL': # Gère le cas où vous voudriez utiliser 'ALL' ailleurs
+        df_filtered = df.copy()
+        title_text = "Volume d'Articles par Thème (Global)"
     else:
-        st.info("Données d'évolution non disponibles.")
+        df_filtered = df[df['year'] == annee]
+        title_text = f"<b>Volume d'Articles par Thème en {annee}</b>"
 
-st.divider()
+    df_count = df_filtered.groupby('Theme').size().reset_index(name='Count')
+    # Optionnel: Exclure le "Bruit Média" pour la clarté
+    df_count = df_count[df_count['Theme'] != 'Bruit Média/Podcast'] 
+    
+    fig = px.bar(
+        df_count.sort_values(by='Count', ascending=False),
+        x='Theme',
+        y='Count',
+        color='Theme',
+        title=title_text,
+        height=600
+    )
+    fig.update_layout(xaxis={'categoryorder': 'total descending', 'tickangle': -45}, margin=dict(t=50, b=100))
+    return fig
 
-# 3. CARTE INTERACTIVE
-st.subheader("🌍 Carte Interactive des Pays & Lieux")
-view_state = pdk.ViewState(latitude=46.0, longitude=2.0, zoom=1, pitch=45 if "3D" in map_type else 0)
+def generate_top_words_bar(df_words):
+    """
+    Génère un bar chart horizontal (facetté) montrant
+    les 3 mots-clés les plus significatifs par thème
+    selon leur poids TF-IDF.
+    """
 
-if map_type == "Scatter (Points)":
-    fig_map = px.scatter_geo(
-        current_df, lat='Latitude', lon='Longitude', hover_name='Location',
+    # S'assurer que les mots sont triés par importance dans chaque thème
+    df_words_sorted = df_words.sort_values(
+        by=['Theme', 'Importance_Poids_TFIDF'],
+        ascending=[True, False]
+    )
+
+    fig = px.bar(
+        df_words_sorted,
+        x='Importance_Poids_TFIDF',
+        y='Mot_Cle',
+        color='Theme',
+        facet_col='Theme',
+        facet_col_wrap=2,   # 2 colonnes de facettes
+        orientation='h',
+        facet_col_spacing=0.1, 
+        title="<b>Top 3 des mots-clés les plus significatifs par thème (TF-IDF)</b>",
+        labels={
+            'Importance_Poids_TFIDF': 'Poids TF-IDF',
+            'Mot_Cle': 'Mot-clé'
+        }
+    )
+
+    # Permet d'avoir des axes Y indépendants (mots différents par thème)
+    fig.update_yaxes(matches=None, showticklabels=True)
+
+    # Amélioration de la lisibilité globale
+    fig.update_layout(
+        showlegend=False,
+        height=900,
+        margin=dict(t=80, l=80, r=40, b=40)
+    )
+
+    return fig
+
+
+
+
+
+# --- FONCTIONS VISUALISATION UTILISATEUR (GÉO) ---
+def generate_geo_map(df):
+    if df.empty:
+        return px.scatter_geo(title="Pas de données géographiques")
+    fig = px.scatter_geo(
+        df, lat='Latitude', lon='Longitude', hover_name='Location',
         size='Count', color='Count', projection='natural earth',
         color_continuous_scale='Plasma', size_max=40,
-        template="plotly_dark"
-
+        template="plotly_dark",
+        title="<b>Distribution Géographique des Mentions</b>"
     )
-    fig_map.update_geos(
+    fig.update_geos(
         showcoastlines=True, coastlinecolor="RebeccaPurple",
-        showland=True, landcolor="#e5e5e5", # Terre en gris clair
-        showocean=True, oceancolor="#c9d2e0", # Océan en bleu-gris
+        showland=True, landcolor="#e5e5e5",
+        showocean=True, oceancolor="#c9d2e0",
         showlakes=True, lakecolor="Blue",
-        showcountries=True, countrycolor="white" # Frontières visibles
+        showcountries=True, countrycolor="white"
     )
-    
-    fig_map.update_layout(height=600, margin={"r":0,"t":0,"l":0,"b":0}, paper_bgcolor='rgba(0,0,0,0)')
-    selection = st.plotly_chart(fig_map, on_select="rerun", selection_mode="points", use_container_width=True)
-else:
-    # Logic Pydeck (3D / Heatmap / Hexagon)
-    layers = []
-    if map_type == "Colonnes 3D (Volume)":
-        layers.append(pdk.Layer("ColumnLayer", data=current_df, get_position='[Longitude, Latitude]', get_elevation='Count', elevation_scale=100, radius=20000, get_fill_color='[255, 140, 0, 140]', pickable=True))
-    elif map_type == "Heatmap & Densité (Analyse)":
-        layers.append(pdk.Layer("HeatmapLayer", data=current_df, get_position='[Longitude, Latitude]', get_weight='Count', radiusPixels=60))
-    elif map_type == "Cellules Hexagonales (Précision)":
-        layers.append(pdk.Layer("HexagonLayer", data=current_df, get_position='[Longitude, Latitude]', get_elevation_weight='Count', elevation_scale=50, elevation_range=[0, 3000], extruded=True, radius=20000, pickable=True, upper_percentile=98, material=True))
-    
-    st.pydeck_chart(pdk.Deck(layers=layers, initial_view_state=view_state, map_style=pdk.map_styles.DARK, tooltip={"html": "<b>{Location}</b>: {Count} mentions"}))
-    selection = None
+    fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0}, paper_bgcolor='rgba(0,0,0,0)')
+    return fig
 
-# 4. ANALYSE DÉTAILLÉE AU CLIC
-if selection and selection.get('selection', {}).get('point_indices'):
-    idx = selection['selection']['point_indices'][0]
-    target_location = current_df.iloc[idx]['Location']
-    
-    st.divider()
-    st.markdown(f"## 🔎 Focus : **{target_location}**")
-    # (Le reste de votre code d'analyse détaillée peut rester ici)
-    
-    # 1. Stats Cards
-    # Ensure we can find the location in current_df
-    loc_data_rows = current_df[current_df['Location'] == target_location]
-    if not loc_data_rows.empty:
-        loc_data = loc_data_rows.iloc[0]
-        c1, c2 = st.columns(2)
-        c1.metric("Occurrences Totales", loc_data['Count'])
-        
-        # Calculate Rank
-        current_df_sorted = current_df.sort_values(by="Count", ascending=False).reset_index(drop=True)
-        rank = current_df_sorted[current_df_sorted['Location'] == target_location].index[0] + 1
-        c2.metric("Classement Global", f"#{rank}")
-    
-    # 2. Dynamic Evolution (Line Chart) or Heatmap context
-    st.subheader("📈 Dynamique Temporelle")
-    
-    if not df_year.empty:
-        trend_data = df_year[df_year['Location'] == target_location].sort_values(by='Year')
-        
-        if not trend_data.empty:
-            fig_trend = px.area(
-                trend_data, 
-                x='Year', 
-                y='Count', 
-                markers=True,
-                line_shape='spline',
-                title=f"Évolution des mentions de {target_location}",
-                color_discrete_sequence=['#FF8C00']
-            )
-            fig_trend.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='white',
-                xaxis=dict(showgrid=False),
-                yaxis=dict(showgrid=True, gridcolor='#333')
-            )
-            st.plotly_chart(fig_trend, use_container_width=True)
-        else:
-            st.warning("Pas de données temporelles détaillées disponibles pour ce lieu.")
-    else:
-        st.warning("Données annuelles non disponibles.")
+def generate_geo_top15(df):
+    if df.empty: return go.Figure()
+    top_15 = df.nlargest(15, 'Count')
+    fig = px.bar(
+        top_15, x='Count', y='Location', orientation='h',
+        color='Count', color_continuous_scale='Oranges',
+        labels={'Count': 'Volume de mentions', 'Location': 'Lieu'},
+        title="<b>Top 15 des Lieux Cités</b>"
+    )
+    fig.update_layout(yaxis={'categoryorder':'total ascending'}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', height=500)
+    return fig
 
-st.divider()
-st.caption("Données extraites de Sputnik News. Visualisation générée par Deepmind Agent.")
+def generate_geo_trends(df_year, df_map):
+    if df_year.empty or df_map.empty: return go.Figure()
+    # Top 5 locations ever
+    top_5_ever = df_map.nlargest(5, 'Count')['Location'].tolist()
+    df_top_evolution = df_year[df_year['Location'].isin(top_5_ever)]
+    
+    fig = px.line(
+        df_top_evolution, x='Year', y='Count', color='Location',
+        markers=True, line_shape='spline',
+        title="<b>Évolution Temporelle des Top Lieux</b>"
+    )
+    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', height=500)
+    return fig
+
+# --- 3. DÉFINITION DE L'APPLICATION ET DU LAYOUT (AVEC ONGLET) ---
+
+app = dash.Dash(
+    __name__,
+    external_stylesheets=['https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap']
+)
+
+
+# --- Contenu de l'Onglet 2 : Analyse Annuelle Détaillée ---
+# Déterminons l'année par défaut pour l'initialisation (l'année la plus récente)
+DEFAULT_YEAR = sorted(df_dashboard['year'].unique(), reverse=True)[0] # Ex: '2025'
+
+# --- 3. DÉFINITION DE L'APPLICATION ET DU LAYOUT (AVEC ONGLET) ---
+
+# Ajout du CSS externe pour retirer les marges du body et permettre le plein écran sans scroll
+#app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
+
+# --- Contenu de l'Onglet 2 : Comparaison Globale ---
+tab_comparison_content = html.Div(style={'padding': '0 15px'}, children=[ 
+
+    html.Div([
+        dcc.Graph(figure=generate_article_per_year(df_dashboard), style={'width': '30%', 'height': '600px'}),
+        dcc.Graph(figure=generate_comparison_chart(df_dashboard), style={'width': '60%', 'height': '600px'}),
+        
+    ], style={'display': 'flex', 'justifyContent': 'space-around', 'marginBottom': '20px', 'flexWrap': 'wrap','marginTop': '10px'}),
+    ])
+
+# --- Contenu de l'Onglet 1 : Analyse Annuelle Détaillée ---
+tab_detail_content = html.Div(style={'padding': '0 15px'}, children=[
+    
+    # SÉLECTION D'ANNÉE UNIQUE
+    html.Div([
+        html.P("Sélectionnez l'Année à Analyser:", style={'marginBottom': '10px', 'fontWeight': 'bold'}),
+        dcc.Dropdown(
+            id='year-dropdown-detail',
+            options=[{'label': str(y), 'value': str(y)} for y in sorted(df_dashboard['year'].unique(), reverse=True)],
+            value=DEFAULT_YEAR, 
+            clearable=False,
+            style={'width': '200px', 'marginBottom': '20px'}
+        ),
+    ], style={'display': 'flex', 'alignItems': 'center', 'gap': '20px', 'marginLeft': '20px','marginTop': '10px'}),
+
+    # Conteneur des graphiques dynamiques
+    html.Div([
+        # 1. Articles par Mois (Dynamique) 
+        dcc.Graph(
+            id='articles-per-month-dynamic', 
+            figure=generate_article_per_month(df_dashboard, DEFAULT_YEAR), 
+            style={'width': '30%', 'height': '600px'}
+        ),
+        # 2. Volume Thématique (Dynamique) 
+        dcc.Graph(
+            id='theme-volume-bar-dynamic', 
+            figure=generate_theme_volume_bar(df_dashboard, DEFAULT_YEAR), 
+            style={'width': '60%', 'height': '600px'}
+        ),
+    ], style={'display': 'flex', 'justifyContent': 'space-around', 'marginBottom': '30px', 'flexWrap': 'wrap'}),
+    
+    html.Div([
+        dcc.Graph(
+            id='heatmap-themes-dynamic', 
+            figure=generate_heatmap_themes(df_dashboard, DEFAULT_YEAR)
+        )
+    ]), 
+
+    html.Div([
+        dcc.Graph(
+            id='trend-chart',
+            figure=generate_trend_chart(df_dashboard)
+        )
+    ]),
+
+
+])
+    
+
+# --- Contenu de l'Onglet 3 : Aperçu Global (Structure) ---
+# Ajout de 'padding' au conteneur principal de l'onglet
+# --- Contenu de l'Onglet 3 : Aperçu Global (Structure Sémantique et Spatiale) ---
+tab_global_structure_content = html.Div(style={'padding': '0 15px'}, children=[
+
+    # 4. SECTION GÉOPOLITIQUE (UTILISATEUR) - Moved to Top
+    html.H2("Carte Interactive des Pays & Lieux", style={'textAlign': 'center', 'color': '#2C3E50', 'marginTop': '30px'}),
+    
+    html.Div([
+        # Carte
+        html.Div([
+            dcc.Graph(figure=generate_geo_map(df_geo_map), style={'width': '100%', 'height': '600px', 'boxShadow': '0 4px 6px rgba(0,0,0,0.1)', 'borderRadius': '10px', 'padding': '10px', 'backgroundColor': 'white'}),
+        ], style={'width': '100%', 'marginBottom': '20px'}),
+        
+        # Stats charts side-by-side
+        html.Div([
+            html.Div([dcc.Graph(figure=generate_geo_top15(df_geo_map))], style={'width': '48%', 'display': 'inline-block', 'boxShadow': '0 4px 6px rgba(0,0,0,0.1)', 'borderRadius': '10px', 'padding': '10px', 'backgroundColor': 'white'}),
+            html.Div([dcc.Graph(figure=generate_geo_trends(df_geo_year, df_geo_map))], style={'width': '48%', 'display': 'inline-block', 'float': 'right', 'boxShadow': '0 4px 6px rgba(0,0,0,0.1)', 'borderRadius': '10px', 'padding': '10px', 'backgroundColor': 'white'}),
+        ], style={'width': '100%', 'marginBottom': '30px'}),
+        
+    ]),
+    html.Hr(),
+
+    # 1. Le graphique des mots-clés (Top Words) prend toute la largeur en haut
+    html.Div([
+        dcc.Graph(figure=generate_top_words_bar(df_top_words), style={'width': '100%', 'height': '700px'}),
+    ], style={'marginBottom': '30px','marginTop': '10px'}),
+
+    # 2. Le Nuage 3D et la Heatmap côte à côte
+    html.Div([
+        dcc.Graph(figure=generate_3d_scatter(df_dashboard), style={'width': '100%', 'height': '600px'}),
+        
+    ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '30px', 'flexWrap': 'wrap'}),
+
+    # 3. Treemap global
+    html.Div([
+        dcc.Graph(id='treemap-global',figure=generate_treemap(df_dashboard), style={'width': '100%', 'height': '600px'}),
+        html.Div(id='theme-name-display', style={'textAlign': 'center', 'fontWeight': 'bold', 'marginTop': '10px'}),
+
+    html.Div(
+    id='theme-image-container',
+    style={
+        'display': 'flex',
+        'justifyContent': 'center',
+        'alignItems': 'center',
+        'marginTop': '30px',
+        'width': '100%'
+    },
+    children=[
+        html.Img(
+            id='theme-image',
+            src='',
+            style={
+                'maxWidth': '600px',
+                'width': '100%',
+                'height': 'auto',
+                'boxShadow': '0 4px 12px rgba(0,0,0,0.15)',
+                'borderRadius': '10px'
+            }
+        )
+    ]
+)
+        
+    ], style={'display': 'flex', 'justifyContent': 'space-between', 'marginBottom': '30px', 'flexWrap': 'wrap'}),
+
+    
+])
+
+# LE LAYOUT FINAL AVEC LES ONGLETS (Plein écran : width: '100vw', margin: '0')
+app.layout = html.Div(style={'fontFamily': 'Arial, sans-serif', 'width': '100vw', 'margin': '0'}, children=[
+    
+    html.H1("Dashboard pour l'analyse de Corpus ", style={'textAlign': 'center', 'color': '#2C3E50', 'marginTop': '20px'}),
+    html.Hr(), 
+
+    dcc.Tabs(id="tabs-graph", value='tab-detail', children=[ 
+        
+
+        # 1. Analyse Détaillée (Focus annuel)
+        dcc.Tab(label='Analyse Annuelle Détaillée', value='tab-detail', children=[tab_detail_content]),
+
+        # 2. Comparaison (Focus principal)
+        dcc.Tab(label='Comparaison 2024 vs 2025', value='tab-comparison', children=[tab_comparison_content]),
+
+        # 3. Aperçu Global (Structure)
+        dcc.Tab(label='Aperçu Global du corpus(Structure)', value='tab-global-structure', children=[tab_global_structure_content]),
+
+        
+        
+    
+    ]),
+])
+
+# --- 4. CALLBACKS (Logique Interactive) ---
+# NOTE: prevent_initial_call=True est ajouté car les figures sont initialisées dans le layout
+# NOTE: allow_duplicate=True est obligatoire car les figures sont initialisées dans le layout
+
+
+# Callback 1 : Mise à jour du Volume par Thème (Bar Chart)
+@app.callback(
+    Output('theme-volume-bar-dynamic', 'figure', allow_duplicate=True),
+    [Input('year-dropdown-detail', 'value')],
+    prevent_initial_call=True 
+)
+def update_theme_volume_bar(selected_year):
+    # Appelle la fonction générée précédemment (generate_theme_volume_bar)
+    return generate_theme_volume_bar(df_dashboard, selected_year)
+
+# Callback 2 : Mise à jour des Articles par Mois (Bar Chart + Tendance)
+@app.callback(
+    Output('articles-per-month-dynamic', 'figure', allow_duplicate=True),
+    [Input('year-dropdown-detail', 'value')],
+    prevent_initial_call=True 
+)
+def update_article_per_month(selected_year):
+    # Utilise la fonction existante (generate_article_per_month)
+    return generate_article_per_month(df_dashboard, selected_year)
+
+@app.callback(
+    Output('heatmap-themes-dynamic', 'figure'),
+    Input('year-dropdown-detail', 'value')
+)
+def update_heatmap(selected_year):
+    # Appelle la fonction qui génère la heatmap pour l'année sélectionnée
+    return generate_heatmap_themes(df_dashboard, selected_year)
+
+# Callback 3 : Mise à jour de la Heatmap (Intensité médiatique)
+@app.callback(
+    [Output('theme-image', 'src'),
+     Output('theme-name-display', 'children')],
+    [Input('treemap-global', 'clickData')]
+)
+def display_theme_image(clickData):
+    if clickData is None:
+        return '', ''
+
+    theme_clicked = clickData['points'][0]['label']
+
+    # 🔍 Récupération du fichier image via le mapping
+    image_filename = THEME_IMAGE_MAP.get(theme_clicked)
+
+    if image_filename is None:
+        return '', f"Aucune image disponible pour le thème : {theme_clicked}"
+
+    image_path = f"/assets/wordclouds/{image_filename}"
+
+    return image_path, f"Vous avez sélectionné : {theme_clicked}"
+
+# --- 5. LANCEMENT DU SERVEUR ---
+if __name__ == '__main__':
+    # Utilisez app.run(debug=True)
+    app.run(debug=True)
